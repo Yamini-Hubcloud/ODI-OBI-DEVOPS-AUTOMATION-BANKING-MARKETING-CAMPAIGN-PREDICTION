@@ -1,0 +1,98 @@
+
+import pandas as pd
+import numpy as np
+from google.colab import files
+
+# Step 1: Upload the CSV file
+uploaded = files.upload()
+
+# Get the file name (it will be the key of the uploaded dict)
+file_name = list(uploaded.keys())[0]
+
+# Step 2: Load the CSV
+df = pd.read_csv(file_name, sep=';')
+
+# Step 3: Handle missing values
+df.replace("unknown", np.nan, inplace=True)
+df.dropna(inplace=True)
+
+# Step 4: Convert target column
+df["y"] = df["y"].map({"yes": 1, "no": 0})
+
+# Step 5: Remove outliers from 'age'
+q1 = df["age"].quantile(0.25)
+q3 = df["age"].quantile(0.75)
+iqr = q3 - q1
+df = df[(df["age"] >= q1 - 1.5*iqr) & (df["age"] <= q3 + 1.5*iqr)]
+
+# Step 6: Save the cleaned CSV
+df.to_csv("cleaned_bank_data.csv", index=False)
+files.download("cleaned_bank_data.csv")  # This will allow you to download the file
+print("Data cleaned & saved!")
+
+print(df.head())
+
+# Step 1: Import libraries
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import classification_report, accuracy_score
+import pandas as pd
+import numpy as np
+
+# Step 2: Create example dataset
+# Let's assume we have 1000 samples and 5 features
+np.random.seed(42)
+X = pd.DataFrame(np.random.randn(1000, 5), columns=['feat1','feat2','feat3','feat4','feat5'])
+y = np.random.randint(0, 2, size=1000)  # Binary target (0 or 1)
+
+# Step 3: Split data into train and test sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Step 4: Initialize and train logistic regression
+model = LogisticRegression(max_iter=500)
+model.fit(X_train, y_train)
+
+# Step 5: Make predictions
+y_pred = model.predict(X_test)
+
+# Step 6: Evaluate model
+accuracy = accuracy_score(y_test, y_pred)
+print("Accuracy:", accuracy)
+print("\nClassification Report:\n", classification_report(y_test, y_pred))
+
+import joblib
+joblib.dump(model, "bank_campaign_model.pkl")
+
+from google.colab import files
+
+files.download("bank_with_predictions.csv")
+
+import pandas as pd
+import joblib
+
+# Load cleaned data
+df = pd.read_csv("cleaned_bank_data.csv")
+
+# Load model
+model = joblib.load("bank_campaign_model.pkl")
+
+# Create X with exact training feature names & order
+X = pd.DataFrame({
+    "feat1": df["age"],
+    "feat2": df["balance"],
+    "feat3": df["duration"],
+    "feat4": df["campaign"],
+    "feat5": df["previous"]
+})
+
+# Ensure correct column order
+X = X[["feat1", "feat2", "feat3", "feat4", "feat5"]]
+
+# Predict
+ypred = model.predict(X)
+
+# Add column & save
+df["ypred"] = ypred
+df.to_csv("bank_with_predictions.csv", index=False)
+
+print("Prediction column created successfully!")
